@@ -1,4 +1,6 @@
+using System;
 using System.Data.Common;
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -70,32 +72,33 @@ public class PlayerMovement : MonoBehaviour
         _playerStance = PlayerStance.Stand;
     }
 
-
-   private void Move(Vector2 axisDirection)
+    private void Move(Vector2 axisDirection)
     {
         Vector3 movementDirection = Vector3.zero;
-
+        bool isPlayerStanding = _playerStance == PlayerStance.Stand;
         bool isPlayerClimbing = _playerStance == PlayerStance.Climb;
-
-        if (isPlayerClimbing)
+        if (isPlayerStanding)
+        {
+            if (axisDirection.magnitude >= 0.1)
+            {
+                float rotationAngle = Mathf.Atan2(axisDirection.x, axisDirection.y) * Mathf.Rad2Deg;
+                float smoothAngle = Mathf.SmoothDampAngle(
+                   transform.eulerAngles.y,
+                   rotationAngle,
+                   ref _rotationSmoothVelocity,
+                   _rotationSmoothTime
+               );
+                transform.rotation = Quaternion.Euler(0f, smoothAngle, 0f);
+                movementDirection = Quaternion.Euler(0f, rotationAngle, 0f) * Vector3.forward;
+                _rigidbody.AddForce(movementDirection * _speed);
+            }
+        }
+        else if (isPlayerClimbing)
         {
             Vector3 horizontal = axisDirection.x * transform.right;
             Vector3 vertical = axisDirection.y * transform.up;
             movementDirection = horizontal + vertical;
             _rigidbody.AddForce(movementDirection * _climbSpeed);
-        }
-        else if (axisDirection.magnitude >= 0.1f)
-        {
-            float rotationAngle = Mathf.Atan2(axisDirection.x, axisDirection.y) * Mathf.Rad2Deg;
-            float smoothAngle = Mathf.SmoothDampAngle(
-                transform.eulerAngles.y,
-                rotationAngle,
-                ref _rotationSmoothVelocity,
-                _rotationSmoothTime
-            );
-            transform.rotation = Quaternion.Euler(0f, smoothAngle, 0f);
-            movementDirection = Quaternion.Euler(0f, rotationAngle, 0f) * Vector3.forward;
-            _rigidbody.AddForce(movementDirection * _speed);
         }
     }
 
